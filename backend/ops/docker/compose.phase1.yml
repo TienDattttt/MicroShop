@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # =========================
+  # Infra services
+  # =========================
+  postgres:
+    image: postgres:16
+    container_name: microshop-postgres
+    environment:
+      POSTGRES_USER: ms
+      POSTGRES_PASSWORD: ms
+      POSTGRES_DB: ms_default
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: microshop-redis
+    ports:
+      - "6379:6379"
+
+  # =========================
+  # Spring Cloud Config Server
+  # =========================
+  config-server:
+    build:
+      context: ../../config-server
+      dockerfile: Dockerfile
+    container_name: microshop-config
+    image: microshop-config:latest
+    ports:
+      - "9296:9296"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    volumes:
+      - ../../config-repo:/config-repo
+
+  # =========================
+  # Eureka Discovery Server
+  # =========================
+  discovery-server:
+    build:
+      context: ../../discovery-server
+      dockerfile: Dockerfile
+    container_name: microshop-discovery
+    image: microshop-discovery:latest
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - config-server
+
+  # =========================
+  # API Gateway
+  # =========================
+  api-gateway:
+    build:
+      context: ../../api-gateway
+      dockerfile: Dockerfile
+    container_name: microshop-gateway
+    image: microshop-gateway:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - config-server
+      - discovery-server
+
+volumes:
+  pgdata:
