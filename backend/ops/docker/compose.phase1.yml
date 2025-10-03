@@ -13,6 +13,8 @@ services:
     build: ../../api-gateway
     ports: ["8080:8080"]
     depends_on: [discovery-server, config-server]
+
+
   postgres-identity:
     image: postgres:16
     environment:
@@ -20,6 +22,19 @@ services:
       POSTGRES_PASSWORD: ms
       POSTGRES_DB: ms_identity
     ports: [ "5434:5432" ]
+
+  postgres-user:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ms
+      POSTGRES_PASSWORD: ms
+      POSTGRES_DB: ms_user
+    ports: [ "5435:5432" ]
+
+  redis:
+    image: redis:7
+    ports: [ "6379:6379" ]
+
   identity-service:
     build: ../../identity-service
     environment:
@@ -28,3 +43,14 @@ services:
       - DB_PASS=ms
     depends_on: [ postgres-identity, discovery-server, config-server ]
     ports: [ "9100:9100" ]
+
+  user-service:
+    build: ../../user-service
+    environment:
+      - DB_URL=jdbc:postgresql://postgres-user:5432/ms_user
+      - DB_USER=ms
+      - DB_PASS=ms
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports: [ "8700:8700" ]
+    depends_on: [ postgres-user, redis, discovery-server, config-server, identity-service ]

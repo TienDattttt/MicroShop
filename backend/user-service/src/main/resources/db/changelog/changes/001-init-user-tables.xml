@@ -1,0 +1,57 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!-- enable extension if needed
+    <changeSet id="000-ext" author="ms">
+      <sql>CREATE EXTENSION IF NOT EXISTS "uuid-ossp";</sql>
+    </changeSet> -->
+
+    <changeSet id="001-userprofile" author="ms">
+        <createTable tableName="user_profiles">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="identity_user_id" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="email" type="varchar(190)"/>
+            <column name="phone" type="varchar(40)"/>
+            <column name="full_name" type="varchar(160)"/>
+            <column name="avatar_url" type="varchar(300)"/>
+            <column name="business_role" type="varchar(20)"/> <!-- CUSTOMER/SHOP/SHIPPER -->
+            <column name="created_at" type="timestamp"/>
+            <column name="updated_at" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="002-address" author="ms">
+        <createTable tableName="addresses">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_profile_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="line1" type="varchar(255)"/>
+            <column name="line2" type="varchar(255)"/>
+            <column name="city" type="varchar(100)"/>
+            <column name="district" type="varchar(100)"/>
+            <column name="ward" type="varchar(100)"/>
+            <column name="country" type="varchar(60)" defaultValue="VN"/>
+            <column name="is_default" type="boolean" defaultValueBoolean="false"/>
+            <column name="note" type="varchar(255)"/>
+            <column name="created_at" type="timestamp"/>
+            <column name="updated_at" type="timestamp"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="addresses" baseColumnNames="user_profile_id"
+                                 referencedTableName="user_profiles" referencedColumnNames="id" constraintName="fk_addr_profile"/>
+    </changeSet>
+
+    <changeSet id="003-index" author="ms">
+        <createIndex indexName="idx_user_profiles_identity" tableName="user_profiles">
+            <column name="identity_user_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
