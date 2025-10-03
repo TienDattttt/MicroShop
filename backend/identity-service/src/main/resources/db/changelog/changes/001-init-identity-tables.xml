@@ -1,0 +1,72 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="001-identity" author="ms">
+
+        <createTable tableName="users">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="username" type="varchar(190)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="password_hash" type="varchar(255)"/>
+            <column name="first_name" type="varchar(120)"/>
+            <column name="last_name" type="varchar(120)"/>
+            <column name="dob" type="date"/>
+            <column name="enabled" type="boolean" defaultValueBoolean="true"/>
+            <column name="created_at" type="timestamp"/>
+        </createTable>
+
+        <createTable tableName="roles">
+            <column name="name" type="varchar(60)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+        </createTable>
+
+        <createTable tableName="permissions">
+            <column name="name" type="varchar(100)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+        </createTable>
+
+        <createTable tableName="invalidated_tokens">
+            <column name="id" type="varchar(64)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="expiry_time" type="timestamp"/>
+        </createTable>
+
+        <createTable tableName="user_roles">
+            <column name="user_id" type="uuid"/>
+            <column name="role_name" type="varchar(60)"/>
+        </createTable>
+        <addPrimaryKey tableName="user_roles" columnNames="user_id,role_name"/>
+
+        <createTable tableName="role_permissions">
+            <column name="role_name" type="varchar(60)"/>
+            <column name="permission_name" type="varchar(100)"/>
+        </createTable>
+        <addPrimaryKey tableName="role_permissions" columnNames="role_name,permission_name"/>
+
+
+        <addForeignKeyConstraint baseTableName="user_roles" baseColumnNames="user_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_ur_user"/>
+        <addForeignKeyConstraint baseTableName="user_roles" baseColumnNames="role_name"
+                                 referencedTableName="roles" referencedColumnNames="name"
+                                 constraintName="fk_ur_role"/>
+
+        <addForeignKeyConstraint baseTableName="role_permissions" baseColumnNames="role_name"
+                                 referencedTableName="roles" referencedColumnNames="name"
+                                 constraintName="fk_rp_role"/>
+        <addForeignKeyConstraint baseTableName="role_permissions" baseColumnNames="permission_name"
+                                 referencedTableName="permissions" referencedColumnNames="name"
+                                 constraintName="fk_rp_permission"/>
+    </changeSet>
+
+</databaseChangeLog>

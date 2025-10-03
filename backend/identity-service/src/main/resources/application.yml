@@ -1,0 +1,37 @@
+server:
+  port: 9100
+  servlet:
+    context-path: /identity
+
+spring:
+  application:
+    name: identity-service
+
+  # Cấu hình Database
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres-identity:5432/ms_identity}
+    username: ${DB_USER:ms}
+    password: ${DB_PASS:ms}
+
+  # Cấu hình JPA/Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+
+  # Cấu hình Liquibase
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+  # Cấu hình Config Server
+  config:
+    import: optional:configserver:http://config-server:9296
+
+jwt:
+  private.key: classpath:keys/private.pem
+  public.key: classpath:keys/public.pem
+# Cấu hình Eureka Client (Service Discovery)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka
