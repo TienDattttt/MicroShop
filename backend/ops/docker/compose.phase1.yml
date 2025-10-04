@@ -22,6 +22,38 @@ services:
     ports:
       - "6379:6379"
 
+  mongo-product:
+    image: mongo:6
+    container_name: microshop-mongo-product
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_product_data:/data/db
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: microshop-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  # optional to debug search
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: microshop-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
   # =========================
   # Spring Cloud Config Server
   # =========================
@@ -71,5 +103,28 @@ services:
       - config-server
       - discovery-server
 
+  # =========================
+  # Product Service
+  # =========================
+  product-service:
+    build:
+      context: ../../product-service
+      dockerfile: Dockerfile
+    container_name: microshop-product-service
+    image: microshop-product-service:latest
+    environment:
+      - MONGO_URL=mongodb://mongo-product:27017/microshop_product
+      - ES_URIS=http://microshop-elasticsearch:9200
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8600:8600"
+    depends_on:
+      - mongo-product
+      - elasticsearch
+      - discovery-server
+      - config-server
+
 volumes:
   pgdata:
+  mongo_product_data:
+  es_data:
