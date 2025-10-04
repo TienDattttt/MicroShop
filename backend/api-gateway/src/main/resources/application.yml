@@ -1,4 +1,9 @@
+server:
+  port: 8080
+
 spring:
+  application:
+    name: api-gateway
   cloud:
     gateway:
       routes:
@@ -6,3 +11,9 @@ spring:
           uri: lb://product-service
           predicates:
             - Path=/product/**
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://microshop-discovery:8761/eureka/

@@ -15,12 +15,16 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - microshop-network
 
   redis:
     image: redis:7
     container_name: microshop-redis
     ports:
       - "6379:6379"
+    networks:
+      - microshop-network
 
   mongo-product:
     image: mongo:6
@@ -29,6 +33,13 @@ services:
       - "27018:27017"
     volumes:
       - mongo_product_data:/data/db
+    networks:
+      - microshop-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
@@ -42,17 +53,26 @@ services:
       - "9300:9300"
     volumes:
       - es_data:/usr/share/elasticsearch/data
+    networks:
+      - microshop-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
 
-  # optional to debug search
   kibana:
     image: docker.elastic.co/kibana/kibana:8.13.4
     container_name: microshop-kibana
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=http://microshop-elasticsearch:9200
     ports:
       - "5601:5601"
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - microshop-network
 
   # =========================
   # Spring Cloud Config Server
@@ -66,9 +86,18 @@ services:
     ports:
       - "9296:9296"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=native
+      - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/config-repo
     volumes:
       - ../../config-repo:/config-repo
+    networks:
+      - microshop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9296/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
 
   # =========================
   # Eureka Discovery Server
@@ -84,7 +113,16 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
     depends_on:
-      - config-server
+      config-server:
+        condition: service_healthy
+    networks:
+      - microshop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
 
   # =========================
   # API Gateway
@@ -100,8 +138,13 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
     depends_on:
-      - config-server
-      - discovery-server
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - microshop-network
+    restart: on-failure
 
   # =========================
   # Product Service
@@ -119,12 +162,26 @@ services:
     ports:
       - "8600:8600"
     depends_on:
-      - mongo-product
-      - elasticsearch
-      - discovery-server
-      - config-server
+      elasticsearch:
+        condition: service_healthy
+      mongo-product:
+        condition: service_started
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - microshop-network
+    restart: on-failure
 
+# =========================
+# Volumes & Network
+# =========================
 volumes:
   pgdata:
   mongo_product_data:
   es_data:
+
+networks:
+  microshop-network:
+    driver: bridge
