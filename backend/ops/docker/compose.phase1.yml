@@ -4,27 +4,45 @@ services:
   # =========================
   # Infra services
   # =========================
-  postgres:
+  postgres-identity:
     image: postgres:16
-    container_name: microshop-postgres
     environment:
       POSTGRES_USER: ms
       POSTGRES_PASSWORD: ms
-      POSTGRES_DB: ms_default
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - microshop-network
+      POSTGRES_DB: ms_identity
+    ports: [ "5434:5432" ]
+
+  postgres-user:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ms
+      POSTGRES_PASSWORD: ms
+      POSTGRES_DB: ms_user
+    ports: [ "5435:5432" ]
 
   redis:
     image: redis:7
-    container_name: microshop-redis
-    ports:
-      - "6379:6379"
-    networks:
-      - microshop-network
+    ports: [ "6379:6379" ]
+
+  identity-service:
+    build: ../../identity-service
+    environment:
+      - DB_URL=jdbc:postgresql://postgres-identity:5432/ms_identity
+      - DB_USER=ms
+      - DB_PASS=ms
+    depends_on: [ postgres-identity, discovery-server, config-server ]
+    ports: [ "9100:9100" ]
+
+  user-service:
+    build: ../../user-service
+    environment:
+      - DB_URL=jdbc:postgresql://postgres-user:5432/ms_user
+      - DB_USER=ms
+      - DB_PASS=ms
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports: [ "8700:8700" ]
+    depends_on: [ postgres-user, redis, discovery-server, config-server, identity-service ]
 
   mongo-product:
     image: mongo:6
@@ -170,6 +188,10 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      identity-service:
+        condition: service_started
+      user-service:
+        condition: service_started
     networks:
       - microshop-network
     restart: on-failure

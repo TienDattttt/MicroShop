@@ -6,14 +6,23 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      discovery:
+        locator:
+          enable: true
       routes:
+        - id: identity-service
+          uri: lb://identity-service
+          predicates:
+            - Path=/identity/**
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/user/**
         - id: product-service
           uri: lb://product-service
           predicates:
             - Path=/product/**
 eureka:
   client:
-    register-with-eureka: true
-    fetch-registry: true
     service-url:
-      defaultZone: http://microshop-discovery:8761/eureka/
+      defaultZone: http://discovery-server:8761/eureka
