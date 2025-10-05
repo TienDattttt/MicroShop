@@ -8,7 +8,6 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: true
       routes:
         - id: identity-service
           uri: lb://identity-service
@@ -18,7 +17,6 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/user/**
-
 eureka:
   client:
     service-url:
