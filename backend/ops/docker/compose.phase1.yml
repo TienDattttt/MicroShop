@@ -14,7 +14,6 @@ services:
     ports: ["8080:8080"]
     depends_on: [discovery-server, config-server]
 
-
   postgres-identity:
     image: postgres:16
     environment:
@@ -35,6 +34,51 @@ services:
     image: redis:7
     ports: [ "6379:6379" ]
 
+  mongo-product:
+    image: mongo:6
+    ports:
+      - "27018:27017"
+#    volumes:
+#      - mongo_product_data:/data/db
+#    networks:
+#      - microshop-network
+#    healthcheck:
+#      test: [ "CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })" ]
+#      interval: 10s
+#      timeout: 10s
+#      retries: 6
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+#    volumes:
+#      - es_data:/usr/share/elasticsearch/data
+#    networks:
+#      - microshop-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    environment:
+      - ELASTICSEARCH_HOSTS=http://microshop-elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+#    networks:
+#      - microshop-network
+
   identity-service:
     build: ../../identity-service
     environment:
@@ -54,3 +98,28 @@ services:
       - REDIS_PORT=6379
     ports: [ "8700:8700" ]
     depends_on: [ postgres-user, redis, discovery-server, config-server, identity-service ]
+
+  product-service:
+    build: ../../product-service
+    environment:
+      - MONGO_URL=mongodb://mongo-product:27017/microshop_product
+      - ES_URIS=http://elasticsearch:9200
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8600:8600"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      mongo-product:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+#    networks:
+#      - microshop-network
+#    restart: on-failure
