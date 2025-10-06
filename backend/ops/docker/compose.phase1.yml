@@ -4,15 +4,22 @@ services:
     build: ../../config-server
     ports: ["9296:9296"]
 
+
   discovery-server:
     build: ../../discovery-server
     ports: ["8761:8761"]
     depends_on: [config-server]
+    networks:
+      - microshop-net
+
 
   api-gateway:
     build: ../../api-gateway
     ports: ["8080:8080"]
     depends_on: [discovery-server, config-server]
+    networks:
+      - microshop-net
+
 
   postgres-identity:
     image: postgres:16
@@ -21,6 +28,9 @@ services:
       POSTGRES_PASSWORD: ms
       POSTGRES_DB: ms_identity
     ports: [ "5434:5432" ]
+    networks:
+      - microshop-net
+
 
   postgres-user:
     image: postgres:16
@@ -29,16 +39,25 @@ services:
       POSTGRES_PASSWORD: ms
       POSTGRES_DB: ms_user
     ports: [ "5435:5432" ]
+    networks:
+      - microshop-net
+
 
   redis:
     image: redis:7
     ports: [ "6379:6379" ]
+    networks:
+      - microshop-net
+
 
   mongo-product:
     image: mongo:6
     ports:
       - "27018:27017"
-#    volumes:
+    networks:
+      - microshop-net
+
+  #    volumes:
 #      - mongo_product_data:/data/db
 #    networks:
 #      - microshop-network
@@ -66,6 +85,9 @@ services:
       interval: 10s
       timeout: 10s
       retries: 6
+    networks:
+      - microshop-net
+
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.13.4
@@ -76,8 +98,10 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
-#    networks:
-#      - microshop-network
+    networks:
+      - microshop-net
+
+
 
   identity-service:
     build: ../../identity-service
@@ -87,6 +111,9 @@ services:
       - DB_PASS=ms
     depends_on: [ postgres-identity, discovery-server, config-server ]
     ports: [ "9100:9100" ]
+    networks:
+      - microshop-net
+
 
   user-service:
     build: ../../user-service
@@ -98,6 +125,9 @@ services:
       - REDIS_PORT=6379
     ports: [ "8700:8700" ]
     depends_on: [ postgres-user, redis, discovery-server, config-server, identity-service ]
+    networks:
+      - microshop-net
+
 
   product-service:
     build: ../../product-service
@@ -120,6 +150,10 @@ services:
         condition: service_started
       user-service:
         condition: service_started
-#    networks:
-#      - microshop-network
-#    restart: on-failure
+    networks:
+      - microshop-net
+
+
+networks:
+  microshop-net:
+    external: true
