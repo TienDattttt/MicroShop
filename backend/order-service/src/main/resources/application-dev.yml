@@ -1,0 +1,20 @@
+# application-dev.yml
+server:
+  port: 8800
+  servlet:
+    context-path: /order
+
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:postgresql://postgres-order:5432/ms_order
+    username: ms
+    password: ms
+  jpa:
+    hibernate.ddl-auto: update
+    show-sql: true
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+spring.kafka.bootstrap-servers: localhost:9092
