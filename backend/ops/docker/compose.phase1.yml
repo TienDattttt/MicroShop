@@ -1,75 +1,229 @@
 version: '3.8'
-
 services:
-  # =========================
-  # Infra services
-  # =========================
-  postgres:
+  config-server:
+    build: ../../config-server
+    ports: ["9296:9296"]
+
+
+  discovery-server:
+    build: ../../discovery-server
+    ports: ["8761:8761"]
+    depends_on: [config-server]
+    networks:
+      - microshop-net
+
+
+  api-gateway:
+    build: ../../api-gateway
+    ports: ["8080:8080"]
+    depends_on: [discovery-server, config-server]
+    networks:
+      - microshop-net
+
+
+  postgres-identity:
     image: postgres:16
-    container_name: microshop-postgres
     environment:
       POSTGRES_USER: ms
       POSTGRES_PASSWORD: ms
-      POSTGRES_DB: ms_default
+      POSTGRES_DB: ms_identity
+    ports: [ "5434:5432" ]
+    networks:
+      - microshop-net
+
+
+  postgres-user:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ms
+      POSTGRES_PASSWORD: ms
+      POSTGRES_DB: ms_user
+    ports: [ "5435:5432" ]
+    networks:
+      - microshop-net
+
+  postgres-order:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ms_order
+      POSTGRES_USER: ms
+      POSTGRES_PASSWORD: ms
+      KAFKA_BROKER: kafka:9092
     ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+      - "5436:5432"
+    networks:
+      - microshop-net
+
+  postgres-payment:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ms
+      POSTGRES_PASSWORD: ms
+      POSTGRES_DB: ms_payment
+    ports: [ "5437:5432" ]
+    networks:
+      - microshop-net
+
+
 
   redis:
     image: redis:7
-    container_name: microshop-redis
-    ports:
-      - "6379:6379"
+    ports: [ "6379:6379" ]
+    networks:
+      - microshop-net
 
-  # =========================
-  # Spring Cloud Config Server
-  # =========================
-  config-server:
-    build:
-      context: ../../config-server
-      dockerfile: Dockerfile
-    container_name: microshop-config
-    image: microshop-config:latest
-    ports:
-      - "9296:9296"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    volumes:
-      - ../../config-repo:/config-repo
 
-  # =========================
-  # Eureka Discovery Server
-  # =========================
-  discovery-server:
-    build:
-      context: ../../discovery-server
-      dockerfile: Dockerfile
-    container_name: microshop-discovery
-    image: microshop-discovery:latest
+  mongo-product:
+    image: mongo:6
     ports:
-      - "8761:8761"
+      - "27018:27017"
+    networks:
+      - microshop-net
+
+  #    volumes:
+  #      - mongo_product_data:/data/db
+  #    networks:
+  #      - microshop-network
+  #    healthcheck:
+  #      test: [ "CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })" ]
+  #      interval: 10s
+  #      timeout: 10s
+  #      retries: 6
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    #    volumes:
+    #      - es_data:/usr/share/elasticsearch/data
+    #    networks:
+    #      - microshop-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+    networks:
+      - microshop-net
+
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    environment:
+      - ELASTICSEARCH_HOSTS=http://microshop-elasticsearch:9200
+    ports:
+      - "5601:5601"
     depends_on:
-      - config-server
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - microshop-net
 
-  # =========================
-  # API Gateway
-  # =========================
-  api-gateway:
-    build:
-      context: ../../api-gateway
-      dockerfile: Dockerfile
-    container_name: microshop-gateway
-    image: microshop-gateway:latest
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
     ports:
-      - "8080:8080"
+      - "9092:9092"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
-      - config-server
-      - discovery-server
+      - zookeeper
+    networks:
+      - microshop-net
 
-volumes:
-  pgdata:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - microshop-net
+
+#  order-service:
+#    build: ../../order-service
+#    environment:
+#      DB_URL: jdbc:postgresql://postgres-order:5432/ms_order
+#      DB_USER: ms
+#      DB_PASS: ms
+#      KAFKA_BROKER: kafka:9092
+#    ports: [ "8800:8800" ]
+#    depends_on: [ postgres-order, kafka, discovery-server, config-server ]
+#    networks:
+#      - microshop-net
+
+  payment-service:
+    build: ../../payment-service
+    environment:
+      - DB_URL=jdbc:postgresql://postgres-payment:5432/ms_payment
+      - DB_USER=ms
+      - DB_PASS=ms
+      - KAFKA_BROKER=kafka:9092
+    ports: [ "8900:8900" ]
+    depends_on: [ postgres-payment, kafka, discovery-server, config-server ]
+    networks:
+      - microshop-net
+
+#  identity-service:
+#    build: ../../identity-service
+#    environment:
+#      - DB_URL=jdbc:postgresql://postgres-identity:5432/ms_identity
+#      - DB_USER=ms
+#      - DB_PASS=ms
+#    depends_on: [ postgres-identity, discovery-server, config-server ]
+#    ports: [ "9100:9100" ]
+#    networks:
+#      - microshop-net
+
+
+#  user-service:
+#    build: ../../user-service
+#    environment:
+#      - DB_URL=jdbc:postgresql://postgres-user:5432/ms_user
+#      - DB_USER=ms
+#      - DB_PASS=ms
+#      - REDIS_HOST=redis
+#      - REDIS_PORT=6379
+#    ports: [ "8700:8700" ]
+#    depends_on: [ postgres-user, redis, discovery-server, config-server, identity-service ]
+#    networks:
+#      - microshop-net
+
+
+#  product-service:
+#    build: ../../product-service
+#    environment:
+#      - MONGO_URL=mongodb://mongo-product:27017/microshop_product
+#      - ES_URIS=http://elasticsearch:9200
+#      - SPRING_PROFILES_ACTIVE=docker
+#    ports:
+#      - "8600:8600"
+#    depends_on:
+#      elasticsearch:
+#        condition: service_healthy
+#      mongo-product:
+#        condition: service_started
+#      discovery-server:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#      identity-service:
+#        condition: service_started
+#      user-service:
+#        condition: service_started
+#    networks:
+#      - microshop-net
+
+
+networks:
+  microshop-net:
+    external: true
