@@ -17,6 +17,7 @@
         <module>common-lib</module>
         <module>shared-kernel</module>
         <module>payment-service</module>
+        <module>order-service</module>
     </modules>
 
     <properties>

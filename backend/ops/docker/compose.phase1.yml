@@ -54,16 +54,6 @@ services:
     networks:
       - microshop-net
 
-  postgres-payment:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: ms
-      POSTGRES_PASSWORD: ms
-      POSTGRES_DB: ms_payment
-    ports: [ "5437:5432" ]
-    networks:
-      - microshop-net
-
 
 
   redis:
@@ -149,17 +139,17 @@ services:
     networks:
       - microshop-net
 
-#  order-service:
-#    build: ../../order-service
-#    environment:
-#      DB_URL: jdbc:postgresql://postgres-order:5432/ms_order
-#      DB_USER: ms
-#      DB_PASS: ms
-#      KAFKA_BROKER: kafka:9092
-#    ports: [ "8800:8800" ]
-#    depends_on: [ postgres-order, kafka, discovery-server, config-server ]
-#    networks:
-#      - microshop-net
+  order-service:
+    build: ../../order-service
+    environment:
+      DB_URL: jdbc:postgresql://postgres-order:5432/ms_order
+      DB_USER: ms
+      DB_PASS: ms
+      KAFKA_BROKER: kafka:9092
+    ports: [ "8800:8800" ]
+    depends_on: [ postgres-order, kafka, discovery-server, config-server ]
+    networks:
+      - microshop-net
 
   payment-service:
     build: ../../payment-service

@@ -1,0 +1,40 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="001-order" author="ms">
+        <createTable tableName="orders">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="UUID"/>
+            <column name="status" type="varchar(30)"/>
+            <column name="total_amount" type="decimal(15,2)"/>
+            <column name="payment_method" type="varchar(50)"/>
+            <column name="shipping_address" type="varchar(255)"/>
+            <column name="created_at" type="timestamp"/>
+            <column name="updated_at" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="002-order-item" author="ms">
+        <createTable tableName="order_items">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="product_id" type="varchar(64)"/>
+            <column name="product_name" type="varchar(255)"/>
+            <column name="price" type="decimal(15,2)"/>
+            <column name="quantity" type="int"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="order_items"
+                                 baseColumnNames="order_id"
+                                 referencedTableName="orders"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_order_item_order"/>
+    </changeSet>
+</databaseChangeLog>
