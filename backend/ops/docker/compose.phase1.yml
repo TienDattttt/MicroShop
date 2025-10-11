@@ -151,6 +151,18 @@ services:
     networks:
       - microshop-net
 
+  payment-service:
+    build: ../../payment-service
+    environment:
+      - DB_URL=jdbc:postgresql://postgres-payment:5432/ms_payment
+      - DB_USER=ms
+      - DB_PASS=ms
+      - KAFKA_BROKER=kafka:9092
+    ports: [ "8900:8900" ]
+    depends_on: [ postgres-payment, kafka, discovery-server, config-server ]
+    networks:
+      - microshop-net
+
 #  identity-service:
 #    build: ../../identity-service
 #    environment:

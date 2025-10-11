@@ -1,0 +1,14 @@
+spring:
+  profiles.active: dev
+  datasource:
+    url: jdbc:postgresql://postgres-payment:5432/ms_payment
+    username: ms
+    password: ms
+server:
+  port: 8900
+  servlet.context-path: /payment
+  jpa:
+    hibernate.ddl-auto: update
+    show-sql: true
+  liquibase.change-log: classpath:db/changelog/db.changelog-master.xml
+spring.kafka.bootstrap-servers: localhost:9092
