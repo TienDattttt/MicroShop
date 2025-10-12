@@ -9,7 +9,7 @@ import java.util.UUID;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class OrderCreateRequest {
     @NotNull private UUID userId;
-    @NotBlank private String shippingAddress;
+    @NotNull private ShippingAddress shippingAddress;
     @NotBlank private String paymentMethod;
 
     @NotEmpty
@@ -21,5 +21,9 @@ public class OrderCreateRequest {
         @NotBlank private String productName;
         @NotNull @Positive private Double price;
         @NotNull @Min(1) private Integer quantity;
+    }
+
+    public String getShippingAddressString() {
+        return (shippingAddress != null) ? shippingAddress.toString() : null;
     }
 }

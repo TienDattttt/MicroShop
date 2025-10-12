@@ -51,7 +51,7 @@ public class OrderCommandService {
                 .userId(req.getUserId())
                 .status("PENDING")
                 .paymentMethod(req.getPaymentMethod())
-                .shippingAddress(req.getShippingAddress())
+                .shippingAddress(req.getShippingAddressString())
                 .totalAmount(total)
                 .build();
 

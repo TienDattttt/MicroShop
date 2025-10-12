@@ -223,6 +223,47 @@ services:
 #    networks:
 #      - microshop-net
 
+  # ==========================================================
+  # 🚚 SHIPPING SERVICE
+  # ==========================================================
+
+  postgres-shipping:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ms_shipping
+      POSTGRES_USER: ms
+      POSTGRES_PASSWORD: ms
+    ports:
+      - "5438:5432"
+    networks:
+      - microshop-net
+
+  mongo-shipping:
+    image: mongo:6
+    ports:
+      - "27019:27017"
+    networks:
+      - microshop-net
+
+  shipping-service:
+    build: ../../shipping-service
+    environment:
+      - DB_URL=jdbc:postgresql://postgres-shipping:5432/ms_shipping
+      - DB_USER=ms
+      - DB_PASS=ms
+      - MONGO_URI=mongodb://mongo-shipping:27017/ms_shipping
+      - KAFKA_BROKER=kafka:9092
+    ports:
+      - "8802:8802"
+    depends_on:
+      - postgres-shipping
+      - mongo-shipping
+      - kafka
+      - discovery-server
+      - config-server
+    networks:
+      - microshop-net
+
 
 networks:
   microshop-net:
