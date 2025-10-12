@@ -54,7 +54,17 @@ services:
     networks:
       - microshop-net
 
-
+  postgres-payment:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ms_payment
+      POSTGRES_USER: ms
+      POSTGRES_PASSWORD: ms
+      KAFKA_BROKER: kafka:9092
+    ports:
+      - "5437:5432"
+    networks:
+      - microshop-net
 
   redis:
     image: redis:7

@@ -1,16 +1,16 @@
 package com.microshop.orderservice.aggregate;
 
-import com.microshop.orderservice.dto.request.OrderCreateRequest;
-import com.microshop.orderservice.entity.OrderItem;
-import com.microshop.orderservice.enums.OrderStatus;
-import com.microshop.orderservice.events.OrderPlacedEvent;
 import com.microshop.orderservice.commands.PlaceOrderCommand;
+import com.microshop.orderservice.enums.OrderStatus;
+import com.microshop.orderservice.events.OrderItemDTO;
+import com.microshop.orderservice.events.OrderPlacedEvent;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,18 +24,30 @@ public class OrderAggregate {
     private String shippingAddress;
     private String paymentMethod;
 
-    // Khởi tạo trống để Axon tái tạo state khi replay event
     public OrderAggregate() {}
 
     @CommandHandler
     public OrderAggregate(PlaceOrderCommand cmd) {
-        // Áp dụng sự kiện khi command được xử lý
+        BigDecimal total = cmd.getItems().stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<OrderItemDTO> itemDTOs = cmd.getItems().stream()
+                .map(i -> new OrderItemDTO(
+                        i.getProductId(),
+                        i.getProductName(),
+                        i.getPrice(),
+                        i.getQuantity()
+                ))
+                .collect(Collectors.toList());
+
         AggregateLifecycle.apply(new OrderPlacedEvent(
                 cmd.getOrderId(),
                 cmd.getUserId(),
                 cmd.getShippingAddress(),
                 cmd.getPaymentMethod(),
-                cmd.getItems()
+                total,
+                itemDTOs
         ));
     }
 
